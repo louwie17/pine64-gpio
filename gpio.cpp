@@ -1,110 +1,122 @@
-#include <iostream>
-#include <sstream>
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <fcntl.h>
+#include "GPIO.h"
 
-class LinuxFile
+using namespace std;
+
+GPIO::GPIO()
 {
-    private:
-        int m_Handle;
+	this->gpionum = "4"; //GPIO4 is default
+    this->export_gpio();
+}
 
-    public:
-        LinuxFile(const char *pFile, int flags = O_RDWR)
-        {
-            m_Handle = open(pFile, flags);
-        }
-
-        ~LinuxFile()
-        {
-            if (m_Handle != -1)
-                close(m_Handle);
-        }
-
-        size_t Write(const void *pBuffer, size_t size)
-        {
-            return write(m_Handle, pBuffer, size);
-        }
-
-        size_t Read(void *pBuffer, size_t size)
-        {
-            return read(m_Handle, pBuffer, size);
-        }
-
-        size_t Write(const char *pText)
-        {
-            return Write(pText, strlen(pText));
-        }
-
-        size_t Write(int number)
-        {
-            char szNum[32];
-            snprintf(szNum, sizeof(szNum), "%d", number);
-            return Write(szNum);
-        }
-};
-
-class LinuxGPIOExporter
+GPIO::GPIO(string gnum)
 {
-    protected:
-        int m_Number;
+	this->gpionum = this->find_gpionum(gnum);  //Instatiate GPIO object for GPIO pin number "gnum"
+    this->export_gpio();
+}
 
-    public:
-        LinuxGPIOExporter(int number)
-            : m_Number(number)
-        {
-            LinuxFile("/sys/class/gpio/export", O_WRONLY).Write(number);
-        }
-
-        ~LinuxGPIOExporter()
-        {
-            LinuxFile("/sys/class/gpio/unexport", O_WRONLY).Write(m_Number);
-        }
-};
-
-class LinuxGPIO : public LinuxGPIOExporter
+GPIO::~GPIO()
 {
-    public:
-        LinuxGPIO(int number)
-            : LinuxGPIOExporter(number)
-        {
-        }
+	this->unexport_gpio();
+}
 
-        void SetValue(bool value)
-        {
-            char szFN[128];
-            snprintf(szFN, sizeof(szFN), "/sys/class/gpio/gpio%d/value", m_Number);
-            LinuxFile(szFN).Write(value ? "1" : "0");
-        }
-
-        void SetDirection(bool isOutput)
-        {
-            char szFN[128];
-            snprintf(szFN, sizeof(szFN), 
-                    "/sys/class/gpio/gpio%d/direction", m_Number);
-            LinuxFile(szFN).Write(isOutput ? "out" : "in");
-        }
-};
-
-int main(int argc, char *argv[])
+string GPIO::find_gpionum(string gnum)
 {
-    std::string s = "PC7";
-    char pre, letter;
-    int pinNum;
+    if (gnum.at(0) == 'P') {
+        char pre, letter;
+        int pinNum;
 
-    std::stringstream ss(s);
-    ss >> pre >> letter >> pinNum;
+        stringstream ss(gnum);
+        ss >> pre >> letter >> pinNum;
 
-    printf("num: %d", (letter - 'A') * 32 + pinNum);
-    LinuxGPIO gpio27(71);
-    gpio27.SetDirection(true);
-    bool on = true;
-    for (;;)
-    {
-        printf("Switching %s the LED...\n", on ? "on" : "off");
-        gpio27.SetValue(on);
-        on = !on;
-        sleep(1);
+        int gpioNum = (letter - 'A') * 32 + pinNum;
+        return to_string(gpioNum);
     }
+    return gnum;
+}
+
+int GPIO::export_gpio()
+{
+	string export_str = "/sys//gpio/export";
+	ofstream exportgpio(export_str.c_str()); // Open "export" file. Convert C++ string to C string. Required for all Linux pathnames
+	if (exportgpio < 0){
+		cout << " OPERATION FAILED: Unable to export GPIO"<< this->gpionum <<" ."<< endl;
+		return -1;
+	}
+
+	exportgpio << this->gpionum ; //write GPIO number to export
+    exportgpio.close(); //close export file
+    return 0;
+}
+
+int GPIO::unexport_gpio()
+{
+	string unexport_str = "/sys//gpio/unexport";
+	ofstream unexportgpio(unexport_str.c_str()); //Open unexport file
+	if (unexportgpio < 0){
+		cout << " OPERATION FAILED: Unable to unexport GPIO"<< this->gpionum <<" ."<< endl;
+		return -1;
+	}
+
+	unexportgpio << this->gpionum ; //write GPIO number to unexport
+    unexportgpio.close(); //close unexport file
+    return 0;
+}
+
+int GPIO::setdir_gpio(string dir)
+{
+
+	string setdir_str ="/sys//gpio/gpio" + this->gpionum + "/direction";
+	ofstream setdirgpio(setdir_str.c_str()); // open direction file for gpio
+		if (setdirgpio < 0){
+			cout << " OPERATION FAILED: Unable to set direction of GPIO"<< this->gpionum <<" ."<< endl;
+			return -1;
+		}
+
+		setdirgpio << dir; //write direction to direction file
+		setdirgpio.close(); // close direction file
+	    return 0;
+}
+
+
+int GPIO::setval_gpio(string val)
+{
+
+	string setval_str = "/sys//gpio/gpio" + this->gpionum + "/value";
+	ofstream setvalgpio(setval_str.c_str()); // open value file for gpio
+		if (setvalgpio < 0){
+			cout << " OPERATION FAILED: Unable to set the value of GPIO"<< this->gpionum <<" ."<< endl;
+			return -1;
+		}
+
+		setvalgpio << val ;//write value to value file
+		setvalgpio.close();// close value file
+	    return 0;
+}
+
+
+int GPIO::getval_gpio(string& val){
+
+	string getval_str = "/sys//gpio/gpio" + this->gpionum + "/value";
+	ifstream getvalgpio(getval_str.c_str());// open value file for gpio
+	if (getvalgpio < 0){
+		cout << " OPERATION FAILED: Unable to get value of GPIO"<< this->gpionum <<" ."<< endl;
+		return -1;
+			}
+
+	getvalgpio >> val ;  //read gpio value
+
+	if(val != "0")
+		val = "1";
+	else
+		val = "0";
+
+	getvalgpio.close(); //close the value file
+    return 0;
+}
+
+
+string GPIO::get_gpionum(){
+
+return this->gpionum;
+
 }
