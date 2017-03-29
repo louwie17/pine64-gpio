@@ -29,14 +29,17 @@ string GPIO::find_gpionum(string gnum)
         ss >> pre >> letter >> pinNum;
 
         int gpioNum = (letter - 'A') * 32 + pinNum;
-        return to_string(gpioNum);
+        std::ostringstream convertss;
+        convertss << gpioNum;
+
+        return convertss.str();
     }
     return gnum;
 }
 
 int GPIO::export_gpio()
 {
-	string export_str = "/sys//gpio/export";
+	string export_str = "/sys/class/gpio/export";
 	ofstream exportgpio(export_str.c_str()); // Open "export" file. Convert C++ string to C string. Required for all Linux pathnames
 	if (exportgpio < 0){
 		cout << " OPERATION FAILED: Unable to export GPIO"<< this->gpionum <<" ."<< endl;
@@ -50,7 +53,7 @@ int GPIO::export_gpio()
 
 int GPIO::unexport_gpio()
 {
-	string unexport_str = "/sys//gpio/unexport";
+	string unexport_str = "/sys/class/gpio/unexport";
 	ofstream unexportgpio(unexport_str.c_str()); //Open unexport file
 	if (unexportgpio < 0){
 		cout << " OPERATION FAILED: Unable to unexport GPIO"<< this->gpionum <<" ."<< endl;
@@ -65,7 +68,7 @@ int GPIO::unexport_gpio()
 int GPIO::setdir_gpio(string dir)
 {
 
-	string setdir_str ="/sys//gpio/gpio" + this->gpionum + "/direction";
+	string setdir_str ="/sys/class/gpio/gpio" + this->gpionum + "/direction";
 	ofstream setdirgpio(setdir_str.c_str()); // open direction file for gpio
 		if (setdirgpio < 0){
 			cout << " OPERATION FAILED: Unable to set direction of GPIO"<< this->gpionum <<" ."<< endl;
@@ -81,7 +84,7 @@ int GPIO::setdir_gpio(string dir)
 int GPIO::setval_gpio(string val)
 {
 
-	string setval_str = "/sys//gpio/gpio" + this->gpionum + "/value";
+	string setval_str = "/sys/class/gpio/gpio" + this->gpionum + "/value";
 	ofstream setvalgpio(setval_str.c_str()); // open value file for gpio
 		if (setvalgpio < 0){
 			cout << " OPERATION FAILED: Unable to set the value of GPIO"<< this->gpionum <<" ."<< endl;
@@ -96,7 +99,7 @@ int GPIO::setval_gpio(string val)
 
 int GPIO::getval_gpio(string& val){
 
-	string getval_str = "/sys//gpio/gpio" + this->gpionum + "/value";
+	string getval_str = "/sys/class/gpio/gpio" + this->gpionum + "/value";
 	ifstream getvalgpio(getval_str.c_str());// open value file for gpio
 	if (getvalgpio < 0){
 		cout << " OPERATION FAILED: Unable to get value of GPIO"<< this->gpionum <<" ."<< endl;
